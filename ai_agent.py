@@ -3,9 +3,19 @@ from card import Card
 import numpy as np
 from MonteCarloState import MCState
 
+# get lowest playable card 
+def get_lowest_value_card(hand, selectable):
+    lowest_pos = -1
+    value = 10000
+    for i in selectable:
+        if hand[i].getValue() < value:
+            value = hand[i].getValue()
+            lowest_pos = i
+    assert(lowest_pos != -1)
+    return lowest_pos
+
 
 class Model:
-    # initializes all the necessary variables in the algorithm.
     def __init__(self, bids) -> None:
         self.bids = bids
         self.players = ['A1', 'B1', 'A2', 'B2']
@@ -14,7 +24,6 @@ class Model:
         self.table = []
 
     def run(self, played_cards, my_cards, selectable, ordering, pos, table) -> int:
-        print(ordering, pos)
         self.cur_player = ordering[pos]
         self.teammate = None
         self.table = table
@@ -28,6 +37,9 @@ class Model:
         MAX_DEPTH = 4 - pos
 
         result = self.minimax_algo(pos, my_cards, played_cards, selectable)
+        if pos >= 2: 
+            if my_cards[result].getValue() < table[pos-2].getValue():
+                return get_lowest_value_card(my_cards, selectable)
         return result
     
     def getWinningCard(self):
@@ -74,8 +86,7 @@ class MCTSModel():
         self.teammate = None
         self.table = []
         self.round_hands = {}
-        
-    #decide the candidature of any node for selection. The node with the highest ucb value is selected.
+
     def UCBValue(self, state : MCState):
         parent = state.GetParent()
         C = 10
@@ -102,6 +113,7 @@ class MCTSModel():
         self.round_hands = hands
 
     def run(self, played_cards, my_cards, selectable, ordering, pos, table) -> int:
+        
         self.cur_player = ordering[pos]
         self.teammate = None
         self.table = table
@@ -111,7 +123,11 @@ class MCTSModel():
         elif self.cur_player == 'B2': self.teammate = 'B1'
         elif self.cur_player == 'B1': self.teammate = 'B2'
 
-        return self.MonteCarlo(pos, my_cards, played_cards, selectable)
+        result = self.MonteCarlo(pos, my_cards, played_cards, selectable)
+        if pos >= 2: 
+            if my_cards[result].getValue() < table[pos-2].getValue():
+                return get_lowest_value_card(my_cards, selectable)
+        return result
 
     def MonteCarlo(self, pos, my_cards, played_cards, selectable):
         CardsQueue = []
