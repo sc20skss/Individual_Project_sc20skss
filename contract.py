@@ -14,7 +14,7 @@ class Contract:
         if (blind):
             self.bidStrings[number - 1] += 'b'
 
-
+#Changed the evaluation to suit the testing: (No lose of points)
     def eval(self, win1, win2):
         score = 0
         bags = 0
@@ -22,45 +22,34 @@ class Contract:
 
         overflow = (win1 + win2) - self.sum
         for i, bid in enumerate(self.bids):
-            # Nil case
             if (bid == 0):
                 if (overflow > 0 or (wins[i] != 0)):
-                    # Lost nil
-                    score -= 100
                     if (self.blinds[i]):
-                        # Lost nil AND blind
-                        score -= 100
+                        pass
                 else:
-                    # Met nil
                     score += 100
                     if (self.blinds[i]):
-                        # Met nil AND blind
                         score += 100
-            # General win case
             elif (overflow >= 0):
                 if (self.blinds[i]):
-                    # Blinds are PERSONAL!
                     if (wins[i] - bid < 0):
-                        score -= 100
+                        pass
                     else:
                         score += 100
                 else:
-                    # Award points for bid
                     score += bid * 10
             else:
-                # Doc as many points as is appropriate
                 if (self.blinds[i]):
-                    score -= 100
+                    pass
                 else:
-                    score -= bid * 10
+                    # no points for not achieving bid
+                    score += 0
 
-        # Handle Bags
         if (overflow > 0):
             for i, bid in enumerate(self.bids):
                 diff = wins[i] - bid
                 if (diff > 0):
                     score += diff
-                   
                     if (not self.blinds[i]):
                         bags += diff
         return score, bags
@@ -68,3 +57,5 @@ class Contract:
    
     def to_string(self, win1, win2):
         return (f"{{{win1}/{self.bidStrings[0]}, {win2}/{self.bidStrings[1]}}}")
+
+# Sources https://github.com/ReillyBova/spades/blob/master/contract.py
