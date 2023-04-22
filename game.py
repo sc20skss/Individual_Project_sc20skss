@@ -1,16 +1,18 @@
 from round import Round
 import os
+import time
 
 YORN = 2
 QUIT = 'q'
 RULES = 'r'
 CONTINUE = 0
 
-DIVIDER = '——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————\n'
+# Adapted work
+DIVIDER = '— — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — —\n'
 HEADER = ("+------------------------+\n" 
           "| ♠♠♠♠♠ SPADE GAME ♠♠♠♠♠ |\n"
           "+------------------------+\n")
-# Handle quitting mid-game
+# Kill the game while in play
 def kill_game(msg, type):
     
     response = None
@@ -19,11 +21,7 @@ def kill_game(msg, type):
         if (response == 'Y'):
             quit()
         elif (response == 'N'):
-
-            # "Go back" to the original prompt (and hope the user doesn't descend much further into the call stack)
             return handle_input(msg, type)
-
-
 
 
 def handle_input(msg, type=(CONTINUE)):
@@ -44,9 +42,9 @@ def handle_input(msg, type=(CONTINUE)):
 
    
 
-
+# Own work here:
 class Game:
-    def __init__(self, winning_value):
+    def __init__(self, winning_value, mode):
         self.win = winning_value 
 
         # Initial values
@@ -55,14 +53,12 @@ class Game:
         self.scores = [0, 0]
         self.bags = [0, 0]
         self.discarded_bags = [0, 0]
+        # 0: viewing, 1: minimax team, 2: monte-carlo team
+        self.mode = mode 
 
-    # Enforce the 7-bag penalty
+
     def score_bags(self):
-        for i in range(2):
-            while (self.bags[i] >= 7):
-                self.bags[i] -= 7
-                self.discarded_bags[i] += 7
-                self.scores[i] -= 100
+        pass
 
     # Rotate order of players every round. (First player of a round is the first to bid and lead!)
     def rotate_order(self):
@@ -93,7 +89,7 @@ class Game:
         game_over = False
         while (not game_over):
             # Run a round
-            roundResult = Round(self.round, self.players, self.game_header())
+            roundResult = Round(self.round, self.players, self.game_header(), self.mode)
 
             # Adjust instance variables as needed based on round results
             self.scores[0] += roundResult.scores[0]
@@ -117,3 +113,6 @@ class Game:
         handle_input(f"Congrats to Team {winner} on their victory! Here are the final results:\n\n"
                      f"\t{self.game_header()}\n\n"
                      "I hope everyone enjoyed the Spades! Press any key to end the game...")
+
+# Source and adapted from https://github.com/ReillyBova/spades/blob/master/card.py
+
