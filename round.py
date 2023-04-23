@@ -3,9 +3,10 @@ from ai_agent import Model, MCTSModel
 import random
 import getpass
 from card import Card
-
+from ai_bidding import bidding_greedy, bidding_heuristic
 
 import os
+import time
 
 YORN = 2
 QUIT = 'q'
@@ -16,7 +17,7 @@ DIVIDER = '———————————————————————
 HEADER = ("+------------------------+\n" 
           "| ♠♠♠♠♠ SPADE GAME ♠♠♠♠♠ |\n"
           "+------------------------+\n")
-# Handle quitting mid-game
+# Kill game 
 def kill_game(msg, type):
     
     response = None
@@ -25,12 +26,7 @@ def kill_game(msg, type):
         if (response == 'Y'):
             quit()
         elif (response == 'N'):
-
-            # "Go back" to the original prompt (and hope the user doesn't descend much further into the call stack)
             return handle_input(msg, type)
-
-
-
 
 def handle_input(msg, type=(CONTINUE)):
     response = input(msg + "\n>>>")
@@ -49,7 +45,7 @@ def handle_input(msg, type=(CONTINUE)):
         return response
 
 class Round:
-    def __init__(self, num, players, game_header):
+    def __init__(self, num, players, game_header, mode):
         self.num = num
         self.players = players
         self.game_state = game_header 
@@ -59,6 +55,8 @@ class Round:
         self.contracts = [Contract(), Contract()]
         self.hands = {}
         self.spade_in_play = False 
+        self.mode = mode
+        self.human_players = self.get_human_players(mode)
 
         self.played_cards = { 'A1' : [], 'B1' : [], 'A2' : [], 'B2' : []}
         self.ai_agent_min_max : Model = None 
@@ -66,6 +64,13 @@ class Round:
 
         # Run the round
         self.run()
+
+    def get_human_players(self, mode):
+        if mode == 0: return []
+        elif mode == 1: return ['A1']
+        elif mode == 2: return ['B1']
+        elif mode == 3: return ['A2']
+        return ['B2']
 
     def deal_cards(self):
         deck = [Card(i) for i  in range(52)]
@@ -160,7 +165,7 @@ class Round:
         print(DIVIDER)
 
     def get_bet(self,p_no):
-        if(p_no==-1):
+        if(self.players[p_no] in self.human_players):
             msg = "Enter how many hands you can win : "
             while (True):
                 bid = handle_input(msg)
@@ -173,7 +178,14 @@ class Round:
                 except:
                     print("Enter an integer!")
         else:
-            bid=random.randint(1,4)
+            assert(p_no >= 0 and p_no < 4)
+            players = ['A1', 'B1', 'A2', 'B2']
+            player_id = players[p_no]
+
+            if p_no%2 == 0:
+                bid = bidding_greedy(self.hands[player_id])
+            else:
+                bid = bidding_heuristic(self.hands[player_id])
             return bid
 
 
@@ -181,7 +193,7 @@ class Round:
         for i, player in enumerate(self.players):
            
             
-            if(i==-1):
+            if(player in self.human_players):
                 self.print_header()
                 blind_msg = ("Would you like to view your cards? Answering no means "
                                 "you will be bidding blind. (y/n)")
@@ -202,7 +214,7 @@ class Round:
                 self.contracts[0].add_bid(number, bid_result, not not_blind)
             else:
                 self.contracts[1].add_bid(number, bid_result, not not_blind)
-
+            """
             # Tell the user what to do next
             if (i ==0):
                 handle_input("Bid accepted!  Press any key to continue....")
@@ -215,6 +227,9 @@ class Round:
             else:
                 self.print_header()
                 handle_input("All bids are made! press any key to begin play....")
+            """
+        
+        handle_input("All bids are made by the players ! press any key to begin play....")
         bids = {'A1' : self.contracts[0].bids[0], 'A2' : self.contracts[0].bids[1], 
                         'B1' : self.contracts[1].bids[0], 'B2' : self.contracts[1].bids[1] }
         self.ai_agent_min_max = Model(bids)
@@ -228,6 +243,9 @@ class Round:
         self.spade_in_play = False
 
         human = 'None'
+        if len(self.human_players) > 0:
+            human = self.human_players[0]
+
         min_max_team = ['A1', 'A2']
 
         for i, player in enumerate(ordering):
@@ -268,13 +286,21 @@ class Round:
                         print("ERROR !!! Not a valid number!")
             elif player in min_max_team:
                 print("Min max team")
-                print(ordering)
+                # print(ordering)
+                start = time.time_ns()
                 result = self.ai_agent_min_max.run(self.played_cards, self.hands[player], selectable, ordering, player_i, table)
+                dur = time.time_ns() - start 
+                dur = dur / 1e6
+                print(f"Team Move time taken: {dur} millisecond" )
             else:
                 print("Monte Cralo Tree Search Team")
-                print(ordering)
+                # print(ordering)
+                start = time.time_ns()
                 self.ai_agent_mcts.set_hands(self.hands)
                 result = self.ai_agent_mcts.run(self.played_cards, self.hands[player], selectable, ordering, player_i, table)
+                dur = time.time_ns() - start 
+                dur = dur / 1e6
+                print(f"Team Move time taken: {dur} millisecond" )
 
     
             self.played_cards[player].append(self.hands[player][result])
@@ -291,7 +317,11 @@ class Round:
 
             self.print_header()
             self.print_table(table, ordering)
-            
+
+            if len(self.human_players) > 0:
+                handle_input("Press any key to play next move.")
+
+
 
         # Determining the winner 
         best_card = table[0]
@@ -316,8 +346,8 @@ class Round:
         for i in range(13):
             lead_player, best_card = self.play_trick(ordering)
             self.winnings[lead_player] += 1
-            msg = (f"Player {lead_player} won the hand with {best_card.order}{best_card.suite}! Press any key to continue...")
-            handle_input(msg)
+            print(f"Player {lead_player} won the hand with {best_card.order}{best_card.suite}!")
+            #handle_input(msg)
 
             # rotating untill the winner comes first
 
@@ -351,7 +381,9 @@ class Round:
 
     # the spade game 
     def run(self):
+        start = time.time()
         self.deal_cards()
         self.bidding()
         self.play_round()
+        print(f"Round Execution time: {time.time() - start} seconds")
         self.score()
