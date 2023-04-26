@@ -97,3 +97,4 @@ def main():
     quit()
 
 main()
+#Source and adapted from https://github.com/ReillyBova/spades/blob/master/card.py

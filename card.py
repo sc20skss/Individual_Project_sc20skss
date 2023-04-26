@@ -60,4 +60,3 @@ class Card:
                 f"│     {ord}{pad}│",
                  "└───────┘"]
 #Source and adapted from https://github.com/ReillyBova/spades/blob/master/card.py
-#

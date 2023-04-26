@@ -387,3 +387,5 @@ class Round:
         self.play_round()
         print(f"Round Execution time: {time.time() - start} seconds")
         self.score()
+
+#Source and adapted from https://github.com/ReillyBova/spades/blob/master/card.py
