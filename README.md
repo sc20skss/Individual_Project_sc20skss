@@ -1,5 +1,5 @@
 # Indivdual_Project
- The final year indvidual project
+ The final year individual project
 
 # Card game- Spades
 # Rules 
